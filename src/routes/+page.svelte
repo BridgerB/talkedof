@@ -1,4 +1,6 @@
 <script lang=ts>
+    export let data;
+	let query = data.query;
     import {
         PUBLIC_SURREALDB_URL,
         PUBLIC_EMAIL,
@@ -102,6 +104,7 @@
             </a>
         </div>
     {/each}
+    {query[0].result[0].transcript}
 </section>
 
 <style lang="scss" type="text/scss">
