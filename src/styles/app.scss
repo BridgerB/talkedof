@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,300;0,600;0,700;1,300&display=swap');
+$font: 'Nunito Sans', sans-serif;
+* {
+    font-size: 16px;
+    font-family: $font;
+}
+// body * {
+//     font-size: 2rem;
+// }
+h1,
+h2,
+h3 {
+    font-weight: 700;
+}
+h4,
+h5,
+h6 {
+    font-weight: 600;
+}
+h1 {
+    font-size: 4rem;
+}
+
+@import './animations';
+@import './variables';
+
+:global(body) {
+    background-color: $theme;
+    color: $theme-text;
+    height: 100%;
+    min-height: 100vh;
+}
+:global(footer) {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    opacity: 0.2;
+    font-size: small;
+    font-family: $font;
+}
+
+section {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+}
+.hero {
+    text-align: center;
+    h1 {
+        flex: 1 0 100%;
+    }
+    input#searchInput {
+        flex: 0 1 60%;
+        padding: 1rem;
+        color: $theme-text;
+        background-color: rgba($theme-element, 0.5);
+        border-radius: 0.33rem;
+        border: 0.25rem solid rgba($theme-element, 0.1);
+        font-size: 1.5rem;
+        font-weight: bold;
+        outline: none;
+        &:hover {
+            border-color: rgba($blue, 0.25);
+        }
+        &:focus {
+            border-color: rgba($blue, 1);
+            background-color: rgba($theme-element, 0.2);
+        }
+        // &::before { TODO: search icon being a little bitch
+        //     content: "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M384 208A176 176 0 1 0 32 208a176 176 0 1 0 352 0zM343.3 366C307 397.2 259.7 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 51.7-18.8 99-50 135.3L507.3 484.7c6.2 6.2 6.2 16.4 0 22.6s-16.4 6.2-22.6 0L343.3 366z'/%3E%3C/svg%3E";
+        //     width: 1em;
+        // }
+        + button {
+            position: relative;
+            left: -3.5rem;
+            background: transparent;
+            border: 0;
+            fill: white;
+            svg {
+                width: 1.5em;
+            }
+        }
+    }
+}
+.searchStatus {
+    padding: 1rem;
+    opacity: 0.5;
+}
+.results {
+    padding: 2rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    flex: 1 0 90%;
+    max-width: 90%;
+    margin: 0 auto;
+    &_card {
+        padding: 1rem;
+        border-radius: 0.25rem;
+        background-color: rgba($theme-element, 0.1);
+        flex: 1 0 15%;
+        min-width: 200px;
+        position: relative;
+        &_link {
+            // display: none;
+            opacity: 0;
+            transition-duration: 100ms;
+            position: absolute;
+            bottom: 0.5em;
+            right: 1rem;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            svg {
+                height: 1em;
+                width: 1em;
+                fill: $theme-text;
+                margin-right: 0.5em;
+            }
+        }
+        &:hover {
+            //TODO: this is flashing weird bc the card still has fade-in classes. trigger those dynamically with svelte or apply these bg changes some other way
+            background-color: rgba($theme-element, 0.25);
+            .results_card_link {
+                opacity: 1;
+                color: $theme-text;
+                &:hover {
+                    font-weight: 600;
+                }
+            }
+        }
+    }
+}
