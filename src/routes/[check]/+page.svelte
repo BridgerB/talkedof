@@ -1,4 +1,6 @@
-<script lang=ts>   
+<script lang=ts>
+    import { page } from "$app/stores";
+    import { goto } from "$app/navigation";
 
     export let data;
     let query = data.query;
@@ -22,8 +24,13 @@
     ];
     let answerCount: any = [{ result: [{ count: "calculating..." }] }];
     export let filter: string = data.check;
+    // export let filter2: string = `/${filter}`;
 
-    async function main() {}
+    async function main() {
+        let url2 = `/${filter}`;
+        goto(url2);
+    }
+
     main();
 </script>
 
@@ -31,7 +38,7 @@
     <h1>allin pod search</h1>
     <input
         placeholder="Search for transcripts"
-        bind:value={data.check}
+        bind:value={filter}
         id="searchInput"
     />
     <button on:click={main}>
@@ -41,6 +48,7 @@
             /></svg
         >
     </button>
+    <a href={filter}> words </a>
 </section>
 <!-- {typeof answerCount[0].result[0].count} -->
 
@@ -79,7 +87,7 @@
     {/each}
     {query[0].result[0].transcript}
     <br />
-    
+
     {JSON.stringify(data.check)}
 </section>
 
