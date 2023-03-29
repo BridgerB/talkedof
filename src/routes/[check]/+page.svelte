@@ -10,6 +10,9 @@
             console.error("Failed to navigate:", error);
         }
     }
+    const checkEnter = e => {
+        if (e.charCode === 13) search();
+    };
 </script>
 
 <section class="hero">
@@ -17,6 +20,7 @@
     <input
         placeholder="Search for transcripts"
         bind:value={filter}
+        on:keypress={checkEnter}
         id="searchInput"
     />
     <button on:click={search}>

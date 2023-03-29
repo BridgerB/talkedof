@@ -9,3 +9,8 @@
     }
     move()
 </script>
+
+
+<style lang="scss" type="text/scss">
+    @import "../styles/app.scss";
+</style>
