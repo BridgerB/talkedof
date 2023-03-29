@@ -106,10 +106,10 @@
             </a>
         </div>
     {/each}
-    {query[0].result[0].transcript}
+    <!-- {query[0].result[0].transcript} -->
     <br />
 
-    {JSON.stringify(data.check)}
+    <!-- {JSON.stringify(data.check)} -->
 </section>
 
 <style lang="scss" type="text/scss">
