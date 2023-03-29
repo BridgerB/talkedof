@@ -1,6 +1,7 @@
-<script lang=ts>
+<script lang=ts>   
+
     export let data;
-	let query = data.query;
+    let query = data.query;
     import {
         PUBLIC_SURREALDB_URL,
         PUBLIC_EMAIL,
@@ -20,11 +21,9 @@
         },
     ];
     let answerCount: any = [{ result: [{ count: "calculating..." }] }];
-    let filter: string = "Elon";
+    export let filter: string = data.check;
 
-    async function main() {
-
-    }
+    async function main() {}
     main();
 </script>
 
@@ -32,7 +31,7 @@
     <h1>allin pod search</h1>
     <input
         placeholder="Search for transcripts"
-        bind:value={filter}
+        bind:value={data.check}
         id="searchInput"
     />
     <button on:click={main}>
@@ -79,8 +78,11 @@
         </div>
     {/each}
     {query[0].result[0].transcript}
+    <br />
+    
+    {JSON.stringify(data.check)}
 </section>
 
 <style lang="scss" type="text/scss">
-    @import "../styles/app.scss";
+    @import "../../styles/app.scss";
 </style>

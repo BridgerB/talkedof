@@ -17,9 +17,9 @@ let query: any[] = [
     },
 ];
 let answerCount: any = [{ result: [{ count: "calculating..." }] }];
-let filter: string = "bird";
+// let filter: string = "bird";
 const db = new Surreal(PUBLIC_SURREALDB_URL);
-export async function load({ fetch }) {
+export async function load({ fetch, params }) {
     async function main() {
         try {
             await Surreal.Instance.connect(PUBLIC_SURREALDB_URL);
@@ -32,7 +32,7 @@ export async function load({ fetch }) {
             });
             await Surreal.Instance.use("allin", "talkedof");
             query = await Surreal.Instance.query(
-                `SELECT * from transcripts where transcript contains '${filter.toLowerCase()}' limit 10;`
+                `SELECT * from transcripts where transcript contains '${params.check.toLowerCase()}' limit 10;`
             );
         } catch (error) {
             console.error("ERROR", error);
@@ -41,8 +41,9 @@ export async function load({ fetch }) {
         }
     }
     await main();
-    console.log(query[0].result[0].transcript)
+    // console.log(query[0].result[0].transcript)
     return {
-        query: query
+        query: query,
+        check: params.check
     }
 }
