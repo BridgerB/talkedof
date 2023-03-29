@@ -23,33 +23,7 @@
     let filter: string = "Elon";
 
     async function main() {
-        try {
-            await Surreal.Instance.connect(PUBLIC_SURREALDB_URL);
-            let token = await Surreal.Instance.signin({
-                NS: "allin",
-                DB: "talkedof",
-                SC: "public24",
-                email: PUBLIC_EMAIL,
-                pass: PUBLIC_PASSWORD,
-            });
-            await Surreal.Instance.use("allin", "talkedof");
-            answer = await Surreal.Instance.query(
-                `SELECT * from transcripts where transcript contains '${filter.toLowerCase()}' limit 10;`
-            );
 
-            try {
-                answerCount = await Surreal.Instance.query(
-                    `SELECT count() FROM transcripts WHERE transcript CONTAINS '${filter.toLowerCase()}' GROUP BY ALL;`
-                );
-            } catch (error) {
-                console.error("Error fetching answer count:", error);
-                answerCount = 0; // set a default value
-            }
-        } catch (error) {
-            console.error("ERROR", error);
-        } finally {
-            Surreal.Instance.close();
-        }
     }
     main();
 </script>
@@ -76,7 +50,7 @@
 </section>
 
 <section class="results">
-    {#each answer[0].result as thing}
+    {#each query[0].result as thing}
         <div class="fade-in-bottom faster results_card">
             <span>"{thing.transcript}"</span>
             <a
