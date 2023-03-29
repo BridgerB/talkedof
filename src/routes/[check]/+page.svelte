@@ -4,7 +4,10 @@
     import { invalidate, invalidateAll } from '$app/navigation';
 
     export let data;
-    let query = data.query;
+    // let query = data.query;
+    // console.log(`b: `+JSON.stringify(query))
+    // console.log(data.query)
+    // console.log(data.check)
     import {
         PUBLIC_SURREALDB_URL,
         PUBLIC_EMAIL,
@@ -24,37 +27,25 @@
         },
     ];
     let answerCount: any = [{ result: [{ count: "calculating..." }] }];
-    export let filter: string = data.check;
+    export let filter: string = data.searchThing;
     // export let filter2: string = `/${filter}`;
 
     async function main() {
-        let url2 = `/${filter}`;
-        try {
-            await invalidateAll()
-            await goto(url2, {invalidateAll: true});
+//         let url2 = `/${filter}`;
+//         try {
+//             await invalidateAll()
+//             await goto(url2, {invalidateAll: true});
             
-        } catch (error) {
-    console.error('Failed to navigate:', error);
-  }
+//         } catch (error) {
+//     console.error('Failed to navigate:', error);
+//   }
 
-    }
-
-    function rerunLoadFunction() {
-    // any of these will cause the `load` function to re-run
-    invalidate('app:random');
-    invalidate('https://api.example.com/random-number');
-    invalidate(url => url.href.includes('random-number'));
-    invalidateAll();
-  
     }
 
 
     // main();
 </script>
-<div>
-    <!-- <p>random number: {data.query}</p> -->
-    <button on:click={rerunLoadFunction}>Update random number</button>
-</div>
+
 <section class="hero">
     <h1>allin pod search</h1>
     <input
@@ -78,38 +69,17 @@
 </section>
 
 <section class="results">
-    {#each query[0].result as thing}
-        <div class="fade-in-bottom faster results_card">
+    <!-- {#each query[0].result as thing}
             <span>"{thing.transcript}"</span>
-            <a
-                href={thing.url + "&t=" + Math.floor(thing.start / 1000) + "s"}
-                target="_blank"
-                rel="noreferrer"
-                class="results_card_link"
-            >
-                <!-- TODO: This approach isnt gonna work on mobile. gonna have to show the link all the time -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"
-                    ><!--! Font Awesome Pro 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><defs
-                        ><style>
-                            .fa-secondary {
-                                opacity: 0.4;
-                            }
-                        </style></defs
-                    ><path
-                        class="fa-primary"
-                        d="M256 128c0-17.7-14.3-32-32-32s-32 14.3-32 32V384c0 17.7 14.3 32 32 32s32-14.3 32-32V128zm192 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V352c0 17.7 14.3 32 32 32s32-14.3 32-32V160zM0 256a32 32 0 1 0 64 0A32 32 0 1 0 0 256zm576 0a32 32 0 1 0 64 0 32 32 0 1 0 -64 0z"
-                    /><path
-                        class="fa-secondary"
-                        d="M320 0c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V32c0-17.7 14.3-32 32-32zM512 64c17.7 0 32 14.3 32 32V416c0 17.7-14.3 32-32 32s-32-14.3-32-32V96c0-17.7 14.3-32 32-32zM128 192c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32s-32-14.3-32-32V224c0-17.7 14.3-32 32-32z"
-                    /></svg
-                > listen
-            </a>
-        </div>
-    {/each}
+    {/each} -->
     <!-- {query[0].result[0].transcript} -->
     <br />
+    <!-- {"Biden: "+JSON.stringify(data.props.query[0].result)} -->
+    <br />
+    <br />
 
-    <!-- {JSON.stringify(data.check)} -->
+    {"URL: "+JSON.stringify(data.props.post[0].result)}
+
 </section>
 
 <style lang="scss" type="text/scss">
