@@ -24,6 +24,7 @@ export async function load({ fetch, params }) {
 
     async function main(searchTerm: string) {
         try {
+            console.log(searchTerm)
             await db.connect(PUBLIC_SURREALDB_URL);
             let token = await db.signin({
                 NS: "allin",
@@ -32,7 +33,6 @@ export async function load({ fetch, params }) {
                 email: PUBLIC_EMAIL,
                 pass: PUBLIC_PASSWORD,
             });
-            console.log(token)
             await db.use("allin", "talkedof");
             answer = await db.query(
                 `SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 10;`
@@ -41,13 +41,10 @@ export async function load({ fetch, params }) {
         } catch (error) {
             console.error("ERROR", error);
         } finally {
-            console.log(`a: ` + answer[0].result[0].transcript)
             db.close();
             return answer;
         }
     }
-
-    await main('biden');
 
     return {
         props: {
