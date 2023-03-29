@@ -1,6 +1,7 @@
 <script lang=ts>
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
+    import { invalidate, invalidateAll } from '$app/navigation';
 
     export let data;
     let query = data.query;
@@ -28,12 +29,32 @@
 
     async function main() {
         let url2 = `/${filter}`;
-        goto(url2);
+        try {
+            await invalidateAll()
+            await goto(url2, {invalidateAll: true});
+            
+        } catch (error) {
+    console.error('Failed to navigate:', error);
+  }
+
     }
 
-    main();
-</script>
+    function rerunLoadFunction() {
+    // any of these will cause the `load` function to re-run
+    invalidate('app:random');
+    invalidate('https://api.example.com/random-number');
+    invalidate(url => url.href.includes('random-number'));
+    invalidateAll();
+  
+    }
 
+
+    // main();
+</script>
+<div>
+    <!-- <p>random number: {data.query}</p> -->
+    <button on:click={rerunLoadFunction}>Update random number</button>
+</div>
 <section class="hero">
     <h1>allin pod search</h1>
     <input

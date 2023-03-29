@@ -17,7 +17,10 @@ let query: any[] = [
     },
 ];
 let answerCount: any = [{ result: [{ count: "calculating..." }] }];
-// let filter: string = "bird";
+
+
+
+let filter: string = "bird";
 const db = new Surreal(PUBLIC_SURREALDB_URL);
 export async function load({ fetch, params }) {
     async function main() {
