@@ -2,12 +2,18 @@ import {
     PUBLIC_SURREALDB_URL,
     PUBLIC_EMAIL,
     PUBLIC_PASSWORD,
+    PUBLIC_USERNAME,
+    PUBLIC_PASSWORD2,
 } from "$env/static/public";
 import Surreal from 'surrealdb.js';
 
 const db = new Surreal(PUBLIC_SURREALDB_URL);
 let answerCount: any = [{ result: [{ count: 12345 }] }];
-export async function load({ fetch, params }) {
+export async function load({ params, url }) {
+    const url2 = new URL(url.origin);
+    const hostnameParts = url2.hostname.split(".");
+    const subdomain = hostnameParts[0];
+    console.log(subdomain);
     let answer: any[] = [
         {
             result: [
@@ -24,16 +30,17 @@ export async function load({ fetch, params }) {
 
     async function main(searchTerm: string) {
         try {
-            console.log(searchTerm)
             await db.connect(PUBLIC_SURREALDB_URL);
             let token = await db.signin({
-                NS: "allin",
-                DB: "talkedof",
-                SC: "public24",
-                email: PUBLIC_EMAIL,
-                pass: PUBLIC_PASSWORD,
+                // NS: "allin",
+                // DB: "talkedof",
+                // SC: "public24",
+                // email: PUBLIC_EMAIL,
+                user: PUBLIC_USERNAME,
+                pass: PUBLIC_PASSWORD2,
             });
-            await db.use("allin", "talkedof");
+            // Select a specific namespace / database
+            await db.use(subdomain, "talkedof");
             answer = await db.query(
                 `SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 10;`
             );
