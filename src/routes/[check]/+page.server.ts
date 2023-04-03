@@ -1,19 +1,19 @@
 import {
-    PUBLIC_SURREALDB_URL,
-    PUBLIC_EMAIL,
-    PUBLIC_PASSWORD,
-    PUBLIC_USERNAME,
-    PUBLIC_PASSWORD2,
-} from "$env/static/public";
+    // PUBLIC_SURREALDB_URL,
+    // PUBLIC_EMAIL,
+    // PUBLIC_PASSWORD,
+    PRIVATE_SURREALDB_URL,
+    PRIVATE_USERNAME,
+    PRIVATE_PASSWORD,
+} from "$env/static/private";
 import Surreal from 'surrealdb.js';
 
-const db = new Surreal(PUBLIC_SURREALDB_URL);
+const db = new Surreal(PRIVATE_SURREALDB_URL);
 let answerCount: any = [{ result: [{ count: 12345 }] }];
 export async function load({ params, url }) {
     const url2 = new URL(url.origin);
     const hostnameParts = url2.hostname.split(".");
-    const subdomain = hostnameParts[0];
-    console.log(subdomain);
+    let subdomain = hostnameParts[0];
     let answer: any[] = [
         {
             result: [
@@ -30,14 +30,14 @@ export async function load({ params, url }) {
 
     async function main(searchTerm: string) {
         try {
-            await db.connect(PUBLIC_SURREALDB_URL);
+            await db.connect(PRIVATE_SURREALDB_URL);
             let token = await db.signin({
                 // NS: "allin",
                 // DB: "talkedof",
                 // SC: "public24",
                 // email: PUBLIC_EMAIL,
-                user: PUBLIC_USERNAME,
-                pass: PUBLIC_PASSWORD2,
+                user: PRIVATE_USERNAME,
+                pass: PRIVATE_PASSWORD,
             });
             // Select a specific namespace / database
             await db.use(subdomain, "talkedof");

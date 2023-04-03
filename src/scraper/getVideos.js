@@ -1,0 +1,97 @@
+import {
+  PRIVATE_SURREALDB_URL,
+  PRIVATE_USERNAME,
+  PRIVATE_PASSWORD,
+} from "$env/static/private";
+// import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts"; //deno
+// import Surreal from "https://deno.land/x/surrealdb/mod.ts"; //deno
+import puppeteer from 'puppeteer'; //node
+import Surreal from 'surrealdb.js'; //node
+//********************************************************************
+const channel_name = 'everyframeapainting';
+//********************************************************************
+const url = `https://www.youtube.com/@${channel_name}/videos`;
+const db = new Surreal(PRIVATE_SURREALDB_URL);
+
+const SURREAL_CREDENTIALS = {
+  user: PRIVATE_USERNAME,
+  pass: PRIVATE_PASSWORD,
+};
+
+async function signInAndUseNamespace() {
+  await db.signin(SURREAL_CREDENTIALS);
+  await db.use(`${channel_name}`, `talkedof`);
+  console.log(`Connected to namespace: ${channel_name}`);
+}
+
+async function setupBrowser() {
+  const browser = await puppeteer.launch({ headless: true, dumpio: false });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1920, height: 1080 });
+  await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
+
+  return { browser, page };
+}
+
+async function scrollToBottom(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let scrollTop;
+      const scrollInterval = setInterval(() => {
+        scrollTop = document.documentElement.scrollTop;
+        window.scrollBy(0, 10000);
+
+        if (document.documentElement.scrollTop === scrollTop) {
+          clearInterval(scrollInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+}
+
+async function scrapeVideoData(page) {
+  await page.goto(url, { waitUntil: 'networkidle2' });
+  await scrollToBottom(page);
+
+  return page.$$eval('a', as => as.map(a => ({
+    url: a.href,
+    title: a.title,
+  })));
+}
+
+async function storeVideos(videos) {
+  let count = 0;
+
+  for (const video of videos) {
+    if (video.url.includes('watch') && video.title !== '') {
+      count += 1;
+      console.log(video.url, video.title);
+      const record = await db.create('videos', {
+        ...video,
+        transcribed: false,
+        skipped: false,
+        channel: channel_name,
+      });
+      console.log(record);
+    }
+  }
+
+  console.log(`Added ${count} videos.`);
+}
+
+async function main() {
+  try {
+    await signInAndUseNamespace();
+    const { browser, page } = await setupBrowser();
+    const videos = await scrapeVideoData(page);
+    await storeVideos(videos);
+    await browser.close();
+  } catch (e) {
+    console.error('ERROR', e);
+  } finally {
+    db.close();
+  }
+}
+
+main();
