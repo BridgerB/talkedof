@@ -42,7 +42,7 @@ export async function load({ params, url }) {
             // Select a specific namespace / database
             await db.use(subdomain, "talkedof");
             answer = await db.query(
-                `SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 10;`
+                `SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 50;`
             );
 
         } catch (error) {
@@ -57,6 +57,7 @@ export async function load({ params, url }) {
         props: {
             post: await main(params.check),
             searchThing: (params.check.toString()),
+            subdomain: subdomain,
         }
     };
 }

@@ -16,7 +16,7 @@
 </script>
 
 <section class="hero">
-    <h1>allin pod search</h1>
+    <h1>{data.props.subdomain} search</h1>
     <input
         placeholder="Search for transcripts"
         bind:value={filter}
