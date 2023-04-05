@@ -5,7 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'everyframeapainting';
+const channel_name = 'lexfridman';
+const ns = 'lex'
 //********************************************************************
 const url = `https://www.youtube.com/@${channel_name}/videos`;
 
@@ -18,12 +19,12 @@ const SURREAL_CREDENTIALS = {
 
 async function signInAndUseNamespace() {
   await db.signin(SURREAL_CREDENTIALS);
-  await db.use(`${channel_name}`, `talkedof`);
+  await db.use(ns, `talkedof`);
   console.log(`Connected to namespace: ${channel_name}`);
 }
 
 async function setupBrowser() {
-  const browser = await puppeteer.launch({ headless: false, dumpio: false });
+  const browser = await puppeteer.launch({ headless: true, dumpio: false });
   const page = await browser.newPage();
   await page.setViewport({ width: 1920, height: 1080 });
   await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
@@ -69,7 +70,6 @@ async function storeVideos(videos) {
           ...video,
           transcribed: false,
           skipped: false,
-          // channel: channel_name,
         });
         console.log(record);
       // console.log(video.url, video.title);
