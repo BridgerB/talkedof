@@ -3,7 +3,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 
-const channelId = 'everyframeapainting';
+const channel_name = 'lexfridman';
+const ns = 'lex'
 
 /**
  * Connect to the database.
@@ -15,8 +16,8 @@ async function connectToDatabase() {
         user: process.env.PRIVATE_USERNAME,
         pass: process.env.PRIVATE_PASSWORD,
     });
-    await db.use(channelId, 'talkedof');
-    console.log(`Connected to namespace: ${channelId}`);
+    await db.use(ns, 'talkedof');
+    console.log(`Connected to namespace: ${ns}`);
     return db;
 }
 
@@ -113,7 +114,7 @@ async function processPage(video, db, browser) {
             if (typeof transcripts === 'object') {
                 await processTranscripts(transcripts, url, db, browser);
                 count = transcripts.length;
-                console.log(`Saved ${count} lines to namespace: ${channelId}`);
+                console.log(`Saved ${count} lines to namespace: ${ns}`);
                 await updateVideoStatus(video, db, {
                     transcribed: true,
                     lines: count,
