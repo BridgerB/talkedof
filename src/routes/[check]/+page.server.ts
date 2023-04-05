@@ -29,7 +29,7 @@ export async function load({ params, url }) {
     let filter: string = "bird";
 
     async function main(searchTerm: string) {
-        console.log(`Searched: ${searchTerm}`);
+        console.log(`${subdomain} searched: ${searchTerm}`);
         try {
             await db.connect(PRIVATE_SURREALDB_URL);
             let token = await db.signin({

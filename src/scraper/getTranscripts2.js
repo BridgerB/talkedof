@@ -63,7 +63,6 @@ async function getTranscript(video, db) {
     } catch (e) {
         console.error('ERROR', e);
         console.log('No transcript found...');
-        await updateVideoStatus(video, db, { skipped: true });
     }
     await db.close();
 }
@@ -108,6 +107,7 @@ async function processPage(video, db, browser) {
         const request = response.request();
         if (request.url().includes('transcript')) {
             console.log(`Transcript found...`);
+
             let text = JSON.parse(`${await response.text()}`);
             let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
 
@@ -126,6 +126,9 @@ async function processPage(video, db, browser) {
                 });
             } else {
                 console.log(`ERROR: typeof transcript is not object`);
+                console.log(transcripts)
+                await updateVideoStatus(video, db, { skipped: true });
+
 
             }
             await db.close();
