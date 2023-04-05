@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'lexfridman';
-const ns = 'lex'
+const channel_name = 'everyframeapainting';
+const ns = 'everyframeapainting'
 //********************************************************************
 const url = `https://www.youtube.com/@${channel_name}/videos`;
 
@@ -53,10 +53,15 @@ async function scrapeVideoData(page) {
   await page.goto(url, { waitUntil: 'networkidle2' });
   await scrollToBottom(page);
 
-  return page.$$eval('a', as => as.map(a => ({
-    url: a.href,
-    title: a.title,
-  })));
+
+  return page.$$eval('a', as => as.map(a => {
+
+
+    return {
+      url: a.href,
+      title: a.title,
+    };
+  }));
 }
 
 async function storeVideos(videos) {
@@ -66,13 +71,22 @@ async function storeVideos(videos) {
     if (video.url.includes('watch') && video.title !== '') {
       count += 1;
       try {
+        const regex = /(?:\?v=)(.*)/;
+        const match = video.url.match(regex);
+        const videoId = match ? match[1] : null;
+        console.log(videoId)
+
+        console.log(video.videoId)
         const record = await db.create('videos', {
-          ...video,
+          title: video.title,
+          videoId: videoId,
+
+          // ...video,
           transcribed: false,
           skipped: false,
         });
         console.log(record);
-      // console.log(video.url, video.title);
+        // console.log(video.url, video.title);
       } catch (e) {
         count -= 1;
         console.error(`Error: Video already exists. ${video.title}`);

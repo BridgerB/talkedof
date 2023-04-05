@@ -1,3 +1,4 @@
+// select transcripts[where transcript contains 'film'] from videos where transcribed = true;
 import {
     // PUBLIC_SURREALDB_URL,
     // PUBLIC_EMAIL,

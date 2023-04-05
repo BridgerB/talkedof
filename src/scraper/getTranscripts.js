@@ -4,10 +4,10 @@ import puppeteer from 'puppeteer'; //node
 import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
-
-const channel_name = 'lexfridman';
-const ns = 'lex'
-
+//********************************************************************
+const channel_name = 'everyframeapainting';
+const ns = 'everyframeapainting'
+//********************************************************************
 /**
  * Connect to the database.
  * @returns {Promise<Surreal>} A connected Surreal instance.
@@ -30,7 +30,7 @@ async function connectToDatabase() {
  */
 async function getVideos(db) {
     const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 2'
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 1'
     );
     return videosToTranscribe;
 }
@@ -57,7 +57,7 @@ async function processVideos(videosToTranscribe, db) {
 async function getTranscript(video, db) {
     try {
         const db = await connectToDatabase();
-        const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+        const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
@@ -73,8 +73,8 @@ async function processPage(video, db, browser) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
-    console.log(`Getting transcription for: ${url}`);
-    await page.goto(`${url}`);
+    console.log(`Getting transcription for: ${video.videoId}`);
+    await page.goto(`https://www.youtube.com/watch?v=${video.videoId}}`);
     await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
     await page.click('#info > span:nth-child(3)');
     await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
@@ -102,7 +102,7 @@ async function processPage(video, db, browser) {
             let text = JSON.parse(`${await response.text()}`);
             let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
             if (typeof transcripts === 'object') {
-                await processTranscripts(transcripts, url, db, browser);
+                await processTranscripts(transcripts, url, db, browser, video);
                 count = transcripts.length;
                 console.log(`Saved ${count} lines to namespace: ${ns}`);
                 await updateVideoStatus(video, db, {
@@ -123,18 +123,44 @@ async function processPage(video, db, browser) {
 }
 
 // Process the retrieved transcripts and save them to the database
-async function processTranscripts(transcripts, url, db, browser) {
-    for (let item of transcripts) {
-        let start = parseInt(item.transcriptSegmentRenderer.startMs);
-        let end = parseInt(item.transcriptSegmentRenderer.endMs);
-        let transcript = item.transcriptSegmentRenderer.snippet.runs[0]?.text?.trim()?.replace(/\n\n/g, " ") || ' ';
-        await db.create('transcripts', {
-            url: url,
-            start: start,
-            end: end,
-            transcript: transcript
+async function processTranscripts(transcripts, url, db, browser, video) {
+    // console.log(transcripts)
+    transcripts.forEach((item) => {
+        const segment = item.transcriptSegmentRenderer;
+        let start = parseInt(segment.startMs);
+        let end = parseInt(segment.endMs);
+        let transcript = segment.snippet.runs[0]?.text
+            ?.trim()
+            ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
+            //?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'""]/g, "") // Remove punctuation, including single quotes
+            ?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'"’]/g, "") // Remove punctuation, including single quotes and curly single quotes
+
+            ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
+            ?.toLowerCase() // Convert to lowercase
+            || ' ';
+        item.startMs = start;
+        item.endMs = end;
+        item.transcript = transcript;
+        delete item.transcriptSegmentRenderer;
+        delete segment.startTimeText;
+        delete segment.trackingParams;
+        delete segment.accessibility;
+        delete segment.targetId;
+        delete segment.snippet;
+    });
+    // console.log(transcripts)
+
+
+
+    try {
+        await db.change(video.id, {
+            transcripts: transcripts
         });
+    } catch (e) {
+        //https://github.com/surrealdb/surrealdb.js/issues/74
+        console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
     }
+
 }
 
 // Update the video status in the database
