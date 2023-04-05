@@ -69,7 +69,7 @@ async function storeVideos(videos) {
           ...video,
           transcribed: false,
           skipped: false,
-          channel: channel_name,
+          // channel: channel_name,
         });
         console.log(record);
       // console.log(video.url, video.title);

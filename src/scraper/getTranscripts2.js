@@ -5,49 +5,54 @@ dotenv.config();
 
 const channelId = 'everyframeapainting';
 
-// Retrieve the video URLs to transcribe
-async function getVideos() {
-    try {
-        const db = await connectToDatabase();
-        const videosToTranscribe = await db.query('SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 2');
-        db.close();
-        return videosToTranscribe;
-    } catch (e) {
-        console.error('ERROR', e);
-    }
-}
-
-// Loop through the videos and get their transcripts
-async function processVideos(videosToTranscribe) {
-    try {
-        for (let video of videosToTranscribe) {
-            for (let subVideo of video.result) {
-                console.log('Start: ************************************************************************************')
-                console.log(subVideo);
-                await getTranscript(subVideo);
-            }
-        }
-    } catch (e) {
-        console.error('ERROR', e);
-    }
-}
-
-// Connect to the database
+/**
+ * Connect to the database.
+ * @returns {Promise<Surreal>} A connected Surreal instance.
+ */
 async function connectToDatabase() {
     const db = new Surreal(process.env.PRIVATE_SURREALDB_URL);
     await db.signin({
-        // NS: channelId,
-        // DB: 'talkedof',
         user: process.env.PRIVATE_USERNAME,
         pass: process.env.PRIVATE_PASSWORD,
     });
-    await db.use(channelId, `talkedof`);
+    await db.use(channelId, 'talkedof');
     console.log(`Connected to namespace: ${channelId}`);
     return db;
 }
 
+/**
+ * Retrieve the video URLs to transcribe.
+ * @param {Surreal} db - Connected Surreal instance.
+ * @returns {Promise<Array>} List of videos to transcribe.
+ */
+async function getVideos(db) {
+    const videosToTranscribe = await db.query(
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 2'
+    );
+    return videosToTranscribe;
+}
+
+/**
+ * Loop through the videos and get their transcripts.
+ * @param {Array} videosToTranscribe - List of videos to transcribe.
+ * @param {Surreal} db - Connected Surreal instance.
+ */
+async function processVideos(videosToTranscribe, db) {
+    const promises = videosToTranscribe.map(async (video) => {
+        for (const subVideo of video.result) {
+            console.log(
+                'Start: ************************************************************************************'
+            );
+            console.log(subVideo);
+            await getTranscript(subVideo, db);
+        }
+
+    });
+    await Promise.all(promises);
+}
+
 // Get the transcript for a video
-async function getTranscript(video) {
+async function getTranscript(video, db) {
     try {
         const db = await connectToDatabase();
         const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
@@ -58,9 +63,8 @@ async function getTranscript(video) {
         console.error('ERROR', e);
         console.log('No transcript found...');
         await updateVideoStatus(video, db, { skipped: true });
-        await db.close();
-        await browser.close();
     }
+    await db.close();
 }
 
 // Process a single video page
@@ -73,7 +77,13 @@ async function processPage(video, db, browser) {
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
 
     console.log(`Getting transcription for: ${url}`);
+
+
+
     await page.goto(`${url}`);
+    await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
+    await page.click('#info > span:nth-child(3)');
+
     await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
     await page.click('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button');
     await page.waitForSelector('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill', { timeout: 5000 });
@@ -81,6 +91,18 @@ async function processPage(video, db, browser) {
     await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
     await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
 
+    const videoDetails = await page.evaluate(() => {
+        const jsonString = document.querySelector("#scriptTag").innerText;
+        const jsonObj = JSON.parse(jsonString);
+        return jsonObj;
+    });
+    const channel = await page.evaluate(() => {
+        const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
+        const match = channelURL.match(/@(.*)/);
+        const result = match[1];
+        console.log(result);
+        return result;
+    });
     page.on('response', async (response) => {
         const request = response.request();
         if (request.url().includes('transcript')) {
@@ -95,6 +117,11 @@ async function processPage(video, db, browser) {
                 await updateVideoStatus(video, db, {
                     transcribed: true,
                     lines: count,
+                    uploadDate: new Date(videoDetails.uploadDate),
+                    channel: channel,
+                    // description: videoDetails.description,
+
+
                 });
             } else {
                 console.log(`ERROR: typeof transcript is not object`);
@@ -125,9 +152,9 @@ async function processTranscripts(transcripts, url, db, browser) {
 // Update the video status in the database
 async function updateVideoStatus(video, db, updateData) {
     try {
-        const updated = await db.change(video.id, updateData);
+        await db.change(video.id, updateData);
         // const updated = await db.query(`UPDATE ${video.id} CONTENT ${updateData}`);
-        console.log(updated);
+        // console.log(updated);
 
     } catch (e) {
         // console.error('ERROR', e);
@@ -138,9 +165,14 @@ async function updateVideoStatus(video, db, updateData) {
 }
 
 // Main function
+// async function main() {
+//     const videosToTranscribe = await getVideos();
+//     await processVideos(videosToTranscribe);
+// }
 async function main() {
-    const videosToTranscribe = await getVideos();
-    await processVideos(videosToTranscribe);
+    const db = await connectToDatabase();
+    const videosToTranscribe = await getVideos(db);
+    await processVideos(videosToTranscribe, db);
 }
 
 main();
