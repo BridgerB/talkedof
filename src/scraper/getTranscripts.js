@@ -30,7 +30,7 @@ async function connectToDatabase() {
  */
 async function getVideos(db) {
     const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 1'
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 4'
     );
     return videosToTranscribe;
 }
@@ -57,7 +57,7 @@ async function processVideos(videosToTranscribe, db) {
 async function getTranscript(video, db) {
     try {
         const db = await connectToDatabase();
-        const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+        const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
@@ -132,11 +132,12 @@ async function processTranscripts(transcripts, url, db, browser, video) {
         let transcript = segment.snippet.runs[0]?.text
             ?.trim()
             ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
-            //?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'""]/g, "") // Remove punctuation, including single quotes
-            ?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'"’]/g, "") // Remove punctuation, including single quotes and curly single quotes
+            //?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'"’?!:;<>\|+-.]/g, "")
+            ?.replace(/[^a-zA-Z\s]/g, "")
 
             ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
             ?.toLowerCase() // Convert to lowercase
+            ?.trim()
             || ' ';
         item.startMs = start;
         item.endMs = end;
