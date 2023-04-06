@@ -28,6 +28,7 @@ export async function load({ params, url }) {
         },
     ];
     let filter: string = "bird";
+    
 
     async function main(searchTerm: string) {
         console.log(`${subdomain} searched: ${searchTerm}`);
@@ -44,7 +45,9 @@ export async function load({ params, url }) {
             // Select a specific namespace / database
             await db.use(subdomain, "talkedof");
             answer = await db.query(
-                `SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 50;`
+                //`SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 50;`
+                `select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcribed = true;`
+
             );
 
         } catch (error) {
