@@ -1,8 +1,4 @@
-// select transcripts[where transcript contains 'film'] from videos where transcribed = true;
 import {
-    // PUBLIC_SURREALDB_URL,
-    // PUBLIC_EMAIL,
-    // PUBLIC_PASSWORD,
     PRIVATE_SURREALDB_URL,
     PRIVATE_USERNAME,
     PRIVATE_PASSWORD,
@@ -31,39 +27,27 @@ export async function load({ params, url }) {
     
 
     async function main(searchTerm: string) {
-        console.log(`${subdomain} searched: ${searchTerm}`);
         try {
             await db.connect(PRIVATE_SURREALDB_URL);
             let token = await db.signin({
-                // NS: "allin",
-                // DB: "talkedof",
-                // SC: "public24",
-                // email: PUBLIC_EMAIL,
                 user: PRIVATE_USERNAME,
                 pass: PRIVATE_PASSWORD,
             });
-            // Select a specific namespace / database
             await db.use(subdomain, "talkedof");
             answer = await db.query(
-                //`SELECT * from transcripts where transcript contains '${searchTerm.toLowerCase()}' limit 50;`
-                // `select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcribed = true;`
-                // `select *, transcripts[where transcript contains 'film'] from videos where transcripts is not NONE;`
-                `select * from (select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcripts is not NONE order by uploadDate DESC) limit 10 `
+                `select uploadDate, count(transcripts[where transcript contains 'films']) from videos where uploadDate is not None order by uploadDate`
             );
 
         } catch (error) {
             console.error("ERROR", error);
         } finally {
+            console.log(answer[0].result)
             db.close();
-            return answer;
+            return answer[0];
         }
     }
 
     return {
-        props: {
-            post: await main(params.check),
-            searchThing: (params.check.toString()),
-            subdomain: subdomain,
-        }
+            count: await main(params.check),
     };
 }

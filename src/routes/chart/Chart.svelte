@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import Chart from "chart.js/auto";
 
-    export let data;
+    export let chartData;
     export let options;
     export let type = "line";
 
@@ -12,7 +12,7 @@
     onMount(() => {
         chart = new Chart(canvas, {
             type,
-            data,
+            data: chartData,
             options,
         });
 
