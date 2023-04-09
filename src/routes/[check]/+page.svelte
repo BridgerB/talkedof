@@ -64,16 +64,25 @@
             <p>{new Date(video.uploadDate).toDateString()}</p>
             <!-- <img src={video.thumbnailUrl} alt="thumnail" width="500" height="300"> -->
             <!-- <p>{JSON.stringify(video.videoId)}</p> -->
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/{video.videoId}?start={Math.floor(video.transcripts[0].startMs / 1000)}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <iframe
+                width="560"
+                height="315"
+                src="https://www.youtube.com/embed/{video.videoId}?start={Math.floor(
+                    video.transcripts[0].startMs / 1000
+                )}"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+            />
         </div>
 
-        
         <br />
         <section class="results">
             {#each video.transcripts as transcript}
                 <div class="fade-in-bottom faster results_card">
                     <span>
-                        "{transcript.transcript}" 
+                        "{transcript.transcript}"
                         <!-- <br /> -->
                         <!-- ({Math.floor(transcript.startMs / 1000)} seconds) -->
                     </span>
@@ -114,9 +123,14 @@
 <br />
 <br />
 <br />
-<section>
+<section class="chart">
     <Chart {chartData} {options} type="line" />
 </section>
+<br />
+<br />
+<br />
+<br />
+<br />
 
 <style lang="scss" type="text/scss">
     @import "../../styles/app.scss";
@@ -125,5 +139,10 @@
     }
     p {
         font-size: 16px;
+    }
+    .chart {
+        max-width: 80%;
+        max-height: 500px;
+        margin: auto;
     }
 </style>
