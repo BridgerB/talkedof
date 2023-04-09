@@ -59,14 +59,24 @@
 {#each data.post[0].result as video}
     {#if video.transcripts.length > 0}
         <br />
-        <h2>{video.title}</h2>
-        <p>{new Date(video.uploadDate).toDateString()}</p>
+        <div style="text-align:center;">
+            <h2>{video.title}</h2>
+            <p>{new Date(video.uploadDate).toDateString()}</p>
+            <!-- <img src={video.thumbnailUrl} alt="thumnail" width="500" height="300"> -->
+            <!-- <p>{JSON.stringify(video.videoId)}</p> -->
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/{video.videoId}?start={Math.floor(video.transcripts[0].startMs / 1000)}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+
         
         <br />
         <section class="results">
             {#each video.transcripts as transcript}
                 <div class="fade-in-bottom faster results_card">
-                    <span>"{transcript.transcript}"</span>
+                    <span>
+                        "{transcript.transcript}" 
+                        <!-- <br /> -->
+                        <!-- ({Math.floor(transcript.startMs / 1000)} seconds) -->
+                    </span>
                     <a
                         href={`https://www.youtube.com/watch?v=${
                             video.videoId
@@ -111,11 +121,9 @@
 <style lang="scss" type="text/scss">
     @import "../../styles/app.scss";
     h2 {
-        font-size: 27px;
-        text-align: center;
+        font-size: 22px;
     }
     p {
         font-size: 16px;
-        text-align: center;
     }
 </style>

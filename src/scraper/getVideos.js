@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'everyframeapainting';
-const ns = 'everyframeapainting'
+const channel_name = 'CurtisVenn';
+const ns = 'curtisvenn'
 //********************************************************************
 const url = `https://www.youtube.com/@${channel_name}/videos`;
 
@@ -52,11 +52,11 @@ async function scrollToBottom(page) {
 async function scrapeVideoData(page) {
   await page.goto(url, { waitUntil: 'networkidle2' });
   await scrollToBottom(page);
-
-
+  
+  
   return page.$$eval('a', as => as.map(a => {
 
-
+    
     return {
       url: a.href,
       title: a.title,
@@ -74,13 +74,13 @@ async function storeVideos(videos) {
         const regex = /(?:\?v=)(.*)/;
         const match = video.url.match(regex);
         const videoId = match ? match[1] : null;
-        console.log(videoId)
+        // console.log(videoId)
 
-        console.log(video.videoId)
+        // console.log(video.videoId)
         const record = await db.create('videos', {
           title: video.title,
           videoId: videoId,
-
+          
           // ...video,
           transcribed: false,
           skipped: false,

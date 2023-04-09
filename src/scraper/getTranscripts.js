@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'everyframeapainting';
-const ns = 'everyframeapainting'
+const channel_name = 'curtisvenn';
+const ns = 'curtisvenn'
 //********************************************************************
 /**
  * Connect to the database.
@@ -30,7 +30,7 @@ async function connectToDatabase() {
  */
 async function getVideos(db) {
     const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 4'
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 13'
     );
     return videosToTranscribe;
 }
@@ -109,6 +109,7 @@ async function processPage(video, db, browser) {
                     transcribed: true,
                     lines: count,
                     uploadDate: new Date(videoDetails.uploadDate),
+                    thumbnailUrl: videoDetails.thumbnailUrl[0],
                     channel: channel,
                 });
             } else {
