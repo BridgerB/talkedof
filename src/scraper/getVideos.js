@@ -66,7 +66,7 @@ async function scrapeVideoData(page) {
 
 async function storeVideos(videos) {
   let count = 0;
-  await db.query(`DEFINE INDEX url ON TABLE videos COLUMNS url UNIQUE;`);
+  await db.query(`DEFINE INDEX url ON TABLE videos COLUMNS videoId UNIQUE;`);
   for (const video of videos) {
     if (video.url.includes('watch') && video.title !== '') {
       count += 1;
