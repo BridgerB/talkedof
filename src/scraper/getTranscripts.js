@@ -54,21 +54,16 @@ async function processVideos(videosToTranscribe, db) {
 
 // Get the transcript for a video
 async function getTranscript(video, db) {
-    let browser;
     try {
         const db = await connectToDatabase();
-        browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+        const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
 
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
         console.log('No transcript found...');
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
-        await db.close();
-    }
+    } 
+    await db.close();
 }
 
 
@@ -113,7 +108,9 @@ async function processPage(video, db, browser) {
         if (request.url().includes('transcript')) {
             console.log(`Transcript found...`);
             let text = JSON.parse(`${await response.text()}`);
+            //TODO 2023-04-28 12:30:10 AM check here tomorrow..
             let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
+            // console.log(`a: `+JSON.stringify(transcripts[0]))
             if (typeof transcripts === 'object') {
                 await processTranscripts(transcripts, url, db, browser, video);
                 count = transcripts.length;
@@ -138,17 +135,20 @@ async function processPage(video, db, browser) {
 
 // Process the retrieved transcripts and save them to the database
 async function processTranscripts(transcripts, url, db, browser, video) {
-    // console.log(transcripts)
-    transcripts.forEach((item, transcriptIndex) => {
-        const segment = item.transcriptSegmentRenderer;
+    transcripts.forEach((item) => {
+        const segment = item.transcriptSectionHeaderRenderer;
+        if (!segment) {
+            console.warn("Skipping an undefined segment.");
+            return;
+        }
+        console.log(`segment: `+JSON.stringify(segment.startMs))
+        console.log(`segment2: `+segment.startMs)
         let start = parseInt(segment.startMs);
         let end = parseInt(segment.endMs);
-        let transcript = segment.snippet.runs[0]?.text
+        let transcript = segment.snippet.simpleText?.text
             ?.trim()
             ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
-            //?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]'"’?!:;<>\|+-.]/g, "")
             ?.replace(/[^a-zA-Z\s]/g, "")
-
             ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
             ?.toLowerCase() // Convert to lowercase
             ?.trim()
@@ -156,7 +156,7 @@ async function processTranscripts(transcripts, url, db, browser, video) {
         item.startMs = start;
         item.endMs = end;
         item.transcript = transcript;
-        item.transcriptIndex = transcriptIndex;
+        // item.transcriptIndex = transcriptIndex;
         delete item.transcriptSegmentRenderer;
         delete segment.startTimeText;
         delete segment.trackingParams;
@@ -164,10 +164,6 @@ async function processTranscripts(transcripts, url, db, browser, video) {
         delete segment.targetId;
         delete segment.snippet;
     });
-    // console.log(transcripts)
-
-
-
     try {
         await db.change(video.id, {
             transcripts: transcripts
@@ -176,7 +172,6 @@ async function processTranscripts(transcripts, url, db, browser, video) {
         //https://github.com/surrealdb/surrealdb.js/issues/74
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
     }
-
 }
 
 // Update the video status in the database
