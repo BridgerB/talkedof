@@ -33,26 +33,16 @@ async function setupBrowser() {
 }
 
 async function scrollToBottom(page) {
-  await page.evaluate(async () => {
-    await new Promise((resolve) => {
-      let scrollTop;
-      let totalHeight = 0;
-      let previousTotalHeight;
-      const scrollInterval = setInterval(async () => {
-        scrollTop = document.documentElement.scrollTop;
-        window.scrollBy(0, 10000);
-        totalHeight += 10000;
-        if (document.documentElement.scrollTop === scrollTop) {
-          clearInterval(scrollInterval);
-          resolve();
-        } else {
-          previousTotalHeight = totalHeight;
-          await new Promise((r) => setTimeout(r, 1000)); // Wait for 1 second before next scroll
-        }
-      }, 100);
+  const endTime = Date.now() + 60000;
+
+  while (Date.now() < endTime) {
+    await page.evaluate(() => {
+      window.scrollBy(0, 10000);
     });
-  });
+    await page.waitForTimeout(100); // Wait for 100 milliseconds before scrolling again
+  }
 }
+
 
 
 async function scrapeVideoData(page) {
