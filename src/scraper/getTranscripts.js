@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'curtisvenn';
-const ns = 'curtisvenn'
+const channel_name = 'allin';
+const ns = 'allin'
 //********************************************************************
 /**
  * Connect to the database.

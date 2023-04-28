@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'CurtisVenn';
-const ns = 'curtisvenn'
+const channel_name = 'allin';
+const ns = 'allin'
 //********************************************************************
 const url = `https://www.youtube.com/@${channel_name}/videos`;
 
@@ -36,18 +36,24 @@ async function scrollToBottom(page) {
   await page.evaluate(async () => {
     await new Promise((resolve) => {
       let scrollTop;
-      const scrollInterval = setInterval(() => {
+      let totalHeight = 0;
+      let previousTotalHeight;
+      const scrollInterval = setInterval(async () => {
         scrollTop = document.documentElement.scrollTop;
         window.scrollBy(0, 10000);
-
+        totalHeight += 10000;
         if (document.documentElement.scrollTop === scrollTop) {
           clearInterval(scrollInterval);
           resolve();
+        } else {
+          previousTotalHeight = totalHeight;
+          await new Promise((r) => setTimeout(r, 1000)); // Wait for 1 second before next scroll
         }
       }, 100);
     });
   });
 }
+
 
 async function scrapeVideoData(page) {
   await page.goto(url, { waitUntil: 'networkidle2' });
