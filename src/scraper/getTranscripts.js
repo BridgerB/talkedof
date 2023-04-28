@@ -30,7 +30,7 @@ async function connectToDatabase() {
  */
 async function getVideos(db) {
     const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 13'
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 2'
     );
     return videosToTranscribe;
 }
@@ -57,7 +57,8 @@ async function getTranscript(video, db) {
     let browser;
     try {
         const db = await connectToDatabase();
-        browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+        browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
@@ -80,14 +81,21 @@ async function processPage(video, db, browser) {
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
     console.log(`Getting transcription for: ${video.videoId}`);
     await page.goto(`https://www.youtube.com/watch?v=${video.videoId}}`);
-    await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
-    await page.click('#info > span:nth-child(3)');
-    await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
-    await page.click('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button');
-    await page.waitForSelector('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill', { timeout: 5000 });
-    await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
-    await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
-    await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
+    try {
+        await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
+        await page.click('#info > span:nth-child(3)');
+        await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
+        await page.click('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button');
+        await page.waitForSelector('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill', { timeout: 5000 });
+        await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
+        await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
+        await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
+    } catch (e) {
+        console.error(`Error: can't find transcript... ${e.message}`);
+        await updateVideoStatus(video, db, { skipped: true });
+        await browser.close();
+        return;
+    }
     const videoDetails = await page.evaluate(() => {
         const jsonString = document.querySelector("#scriptTag").innerText;
         const jsonObj = JSON.parse(jsonString);
