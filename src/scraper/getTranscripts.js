@@ -41,7 +41,7 @@ async function getVideos(db) {
  * @param {Surreal} db - Connected Surreal instance.
  */
 async function processVideos(videosToTranscribe, db) {
-    const promises = videosToTranscribe.map(async (video) => {
+    for (const video of videosToTranscribe) {
         for (const subVideo of video.result) {
             console.log(
                 'Start: ************************************************************************************'
@@ -49,8 +49,7 @@ async function processVideos(videosToTranscribe, db) {
             console.log(subVideo);
             await getTranscript(subVideo, db);
         }
-    });
-    await Promise.all(promises);
+    }
 }
 
 // Get the transcript for a video
