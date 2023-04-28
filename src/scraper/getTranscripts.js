@@ -55,16 +55,22 @@ async function processVideos(videosToTranscribe, db) {
 
 // Get the transcript for a video
 async function getTranscript(video, db) {
+    let browser;
     try {
         const db = await connectToDatabase();
-        const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+        browser = await puppeteer.launch({ headless: true, defaultViewport: null });
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
         console.log('No transcript found...');
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+        await db.close();
     }
-    await db.close();
 }
+
 
 // Process a single video page
 async function processPage(video, db, browser) {
