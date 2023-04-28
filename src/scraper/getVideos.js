@@ -20,7 +20,7 @@ const SURREAL_CREDENTIALS = {
 async function signInAndUseNamespace() {
   await db.signin(SURREAL_CREDENTIALS);
   await db.use(ns, `talkedof`);
-  console.log(`Connected to namespace: ${channel_name}`);
+  console.log(`Connected to namespace: ${ns}`);
 }
 
 async function setupBrowser() {

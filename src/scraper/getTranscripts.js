@@ -126,7 +126,7 @@ async function processPage(video, db, browser) {
 // Process the retrieved transcripts and save them to the database
 async function processTranscripts(transcripts, url, db, browser, video) {
     // console.log(transcripts)
-    transcripts.forEach((item) => {
+    transcripts.forEach((item, transcriptIndex) => {
         const segment = item.transcriptSegmentRenderer;
         let start = parseInt(segment.startMs);
         let end = parseInt(segment.endMs);
@@ -143,6 +143,7 @@ async function processTranscripts(transcripts, url, db, browser, video) {
         item.startMs = start;
         item.endMs = end;
         item.transcript = transcript;
+        item.transcriptIndex = transcriptIndex;
         delete item.transcriptSegmentRenderer;
         delete segment.startTimeText;
         delete segment.trackingParams;
