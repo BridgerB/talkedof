@@ -29,10 +29,15 @@ async function connectToDatabase() {
  * @returns {Promise<Array>} List of videos to transcribe.
  */
 async function getVideos(db) {
-    const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 1'
-    );
-    return videosToTranscribe;
+    try {
+        const videosToTranscribe = await db.query(
+            'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 10'
+        );
+        return videosToTranscribe;
+    } catch (error) {
+        console.error('Error getting videos:', error);
+        return [];
+    }
 }
 
 /**
@@ -41,31 +46,37 @@ async function getVideos(db) {
  * @param {Surreal} db - Connected Surreal instance.
  */
 async function processVideos(videosToTranscribe, db) {
+    const transcriptPromises = [];
+
     for (const video of videosToTranscribe) {
         for (const subVideo of video.result) {
             console.log(
                 'Start: ************************************************************************************'
             );
-            console.log(subVideo);
-            await getTranscript(subVideo, db);
+            transcriptPromises.push(getTranscript(subVideo, db));
         }
     }
+
+    await Promise.all(transcriptPromises);
 }
 
 // Get the transcript for a video
 async function getTranscript(video, db) {
-    try {
-        const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
-        await processPage(video, db, browser);
-    } catch (e) {
-        console.error('ERROR', e);
-        console.log('No transcript found...');
-    }
-}
+    return new Promise(async (resolve, reject) => {
+        try {
+            const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+            await processPage(video, db, browser, resolve);
+        } catch (e) {
+            console.error('ERROR', e);
+            console.log('No transcript found...');
+            reject(e);
+        }
+    })
+};
 
 
 // Process a single video page
-async function processPage(video, db, browser) {
+async function processPage(video, db, browser, resolve) {
     const url = video.url;
     let count = 0;
     const page = await browser.newPage();
@@ -100,7 +111,7 @@ async function processPage(video, db, browser) {
         console.log(result);
         return result;
     });
-    page.on('response', async (response) => {
+    await page.on('response', async (response) => {
         const request = response.request();
         if (request.url().includes('transcript')) {
             console.log(`Transcript found...`);
@@ -109,7 +120,8 @@ async function processPage(video, db, browser) {
             let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
             // console.log(`a: `+JSON.stringify(transcripts[0]))
             if (typeof transcripts === 'object') {
-                await processTranscripts(transcripts, url, db, browser, video);
+                browser.close();
+                await processTranscripts(transcripts, url, db, video);
                 count = transcripts.length;
                 await updateVideoStatus(video, db, {
                     transcribed: true,
@@ -123,46 +135,41 @@ async function processPage(video, db, browser) {
                 console.log(transcripts)
                 await updateVideoStatus(video, db, { skipped: true });
             }
-            await db.close();
             await browser.close();
+            resolve();
         }
     });
 }
 
 // Process the retrieved transcripts and save them to the database
-async function processTranscripts(transcripts, url, db, browser, video) {
-    const filteredTranscripts = transcripts.filter((item) => {
-        return !item.hasOwnProperty('transcriptSectionHeaderRenderer');
+async function processTranscripts(transcripts, url, db, video) {
+    const filteredTranscripts = transcripts.filter(item => !item.hasOwnProperty('transcriptSectionHeaderRenderer'));
+
+    const cleanedTranscripts = filteredTranscripts.map(item => {
+        const segment = item.transcriptSegmentRenderer;
+        let start = parseInt(segment.startMs);
+        let end = parseInt(segment.endMs);
+        let transcript = segment.snippet.runs[0].text
+            ?.trim()
+            ?.replace(/(\n\n|\n)/g, " ")
+            ?.replace(/[^a-zA-Z\s]/g, "")
+            ?.replace(/\s+/g, " ")
+            ?.toLowerCase()
+            ?.trim()
+            || ' ';
+
+        return {
+            startMs: start,
+            endMs: end,
+            transcript: transcript
+        };
     });
 
-    filteredTranscripts.forEach((item) => {
-        const segment = item.transcriptSegmentRenderer;
-        if (segment) {
-            let start = parseInt(segment.startMs);
-            let end = parseInt(segment.endMs);
-            let transcript = segment.snippet.runs[0].text
-                ?.trim()
-                ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
-                ?.replace(/[^a-zA-Z\s]/g, "")
-                ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
-                ?.toLowerCase() // Convert to lowercase
-                ?.trim()
-                || ' ';
-            item.startMs = start;
-            item.endMs = end;
-            item.transcript = transcript;
-            // item.transcriptIndex = transcriptIndex;
-            delete item.transcriptSegmentRenderer;
-            delete segment.startTimeText;
-            delete segment.trackingParams;
-            delete segment.accessibility;
-            delete segment.targetId;
-            delete segment.snippet;
-        }
-    });
     try {
+        console.log(`Updating video transcripts for ${video.videoId}`);
+
         await db.change(video.id, {
-            transcripts: filteredTranscripts
+            transcripts: cleanedTranscripts
         });
     } catch (e) {
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
@@ -173,18 +180,28 @@ async function processTranscripts(transcripts, url, db, browser, video) {
 async function updateVideoStatus(video, db, updateData) {
     try {
         await db.change(video.id, updateData);
+
     } catch (e) {
         //https://github.com/surrealdb/surrealdb.js/issues/74
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
-    } finally {
-        console.log(`updated video status`);
     }
 }
 
-// Main function
 async function main() {
-    const db = await connectToDatabase();
-    const videosToTranscribe = await getVideos(db);
-    await processVideos(videosToTranscribe, db);
+    let db = null;
+    try {
+        db = await connectToDatabase();
+        const videosToTranscribe = await getVideos(db);
+        await processVideos(videosToTranscribe, db);
+    } catch (error) {
+        console.error('Error in main:', error);
+    } finally {
+        if (db) {
+            console.log('Closing database connection...')
+            db.close();
+            console.log('Database connection closed.')
+        }
+    }
 }
 main();
+
