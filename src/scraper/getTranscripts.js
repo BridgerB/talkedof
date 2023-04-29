@@ -30,7 +30,7 @@ async function connectToDatabase() {
  */
 async function getVideos(db) {
     const videosToTranscribe = await db.query(
-        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 2'
+        'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 1'
     );
     return videosToTranscribe;
 }
@@ -55,15 +55,12 @@ async function processVideos(videosToTranscribe, db) {
 // Get the transcript for a video
 async function getTranscript(video, db) {
     try {
-        const db = await connectToDatabase();
         const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
-
         await processPage(video, db, browser);
     } catch (e) {
         console.error('ERROR', e);
         console.log('No transcript found...');
-    } 
-    await db.close();
+    }
 }
 
 
@@ -75,7 +72,7 @@ async function processPage(video, db, browser) {
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
     console.log(`Getting transcription for: ${video.videoId}`);
-    await page.goto(`https://www.youtube.com/watch?v=${video.videoId}}`);
+    await page.goto(`https://www.youtube.com/watch?v=${video.videoId}`);
     try {
         await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
         await page.click('#info > span:nth-child(3)');
@@ -114,7 +111,6 @@ async function processPage(video, db, browser) {
             if (typeof transcripts === 'object') {
                 await processTranscripts(transcripts, url, db, browser, video);
                 count = transcripts.length;
-                console.log(`Saved ${count} lines to namespace: ${ns}`);
                 await updateVideoStatus(video, db, {
                     transcribed: true,
                     lines: count,
@@ -135,41 +131,40 @@ async function processPage(video, db, browser) {
 
 // Process the retrieved transcripts and save them to the database
 async function processTranscripts(transcripts, url, db, browser, video) {
-    transcripts.forEach((item) => {
-        const segment = item.transcriptSectionHeaderRenderer;
-        if (!segment) {
-            console.warn("Skipping an undefined segment.");
-            return;
+    const filteredTranscripts = transcripts.filter((item) => {
+        return !item.hasOwnProperty('transcriptSectionHeaderRenderer');
+    });
+
+    filteredTranscripts.forEach((item) => {
+        const segment = item.transcriptSegmentRenderer;
+        if (segment) {
+            let start = parseInt(segment.startMs);
+            let end = parseInt(segment.endMs);
+            let transcript = segment.snippet.runs[0].text
+                ?.trim()
+                ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
+                ?.replace(/[^a-zA-Z\s]/g, "")
+                ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
+                ?.toLowerCase() // Convert to lowercase
+                ?.trim()
+                || ' ';
+            item.startMs = start;
+            item.endMs = end;
+            item.transcript = transcript;
+            // item.transcriptIndex = transcriptIndex;
+            delete item.transcriptSegmentRenderer;
+            delete segment.startTimeText;
+            delete segment.trackingParams;
+            delete segment.accessibility;
+            delete segment.targetId;
+            delete segment.snippet;
         }
-        console.log(`segment: `+JSON.stringify(segment.startMs))
-        console.log(`segment2: `+segment.startMs)
-        let start = parseInt(segment.startMs);
-        let end = parseInt(segment.endMs);
-        let transcript = segment.snippet.simpleText?.text
-            ?.trim()
-            ?.replace(/(\n\n|\n)/g, " ") // Replace single or double newline characters with a space
-            ?.replace(/[^a-zA-Z\s]/g, "")
-            ?.replace(/\s+/g, " ") // Replace multiple spaces with a single space
-            ?.toLowerCase() // Convert to lowercase
-            ?.trim()
-            || ' ';
-        item.startMs = start;
-        item.endMs = end;
-        item.transcript = transcript;
-        // item.transcriptIndex = transcriptIndex;
-        delete item.transcriptSegmentRenderer;
-        delete segment.startTimeText;
-        delete segment.trackingParams;
-        delete segment.accessibility;
-        delete segment.targetId;
-        delete segment.snippet;
     });
     try {
         await db.change(video.id, {
-            transcripts: transcripts
+            transcripts: filteredTranscripts
         });
     } catch (e) {
-        //https://github.com/surrealdb/surrealdb.js/issues/74
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
     }
 }
@@ -181,6 +176,8 @@ async function updateVideoStatus(video, db, updateData) {
     } catch (e) {
         //https://github.com/surrealdb/surrealdb.js/issues/74
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
+    } finally {
+        console.log(`updated video status`);
     }
 }
 

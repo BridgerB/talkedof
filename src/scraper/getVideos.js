@@ -33,7 +33,7 @@ async function setupBrowser() {
 }
 
 async function scrollToBottom(page) {
-  const endTime = Date.now() + 60000;
+  const endTime = Date.now() + 30000;
 
   while (Date.now() < endTime) {
     await page.evaluate(() => {
@@ -80,6 +80,10 @@ async function storeVideos(videos) {
           // ...video,
           transcribed: false,
           skipped: false,
+          lines: 0,
+          uploadDate: new Date(),
+          thumbnailUrl: 'noneYet',
+          channel: channel_name
         });
         console.log(record);
         // console.log(video.url, video.title);
