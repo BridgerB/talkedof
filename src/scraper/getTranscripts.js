@@ -109,18 +109,18 @@ async function processPage(video, db, browser, resolve) {
 
     await page.on('response', async (response) => {
         try {
-                const videoDetails = await page.evaluate(() => {
-        const jsonString = document.querySelector("#scriptTag").innerText;
-        const jsonObj = JSON.parse(jsonString);
-        return jsonObj;
-    });
-    const channel = await page.evaluate(() => {
-        const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
-        const match = channelURL.match(/@(.*)/);
-        const result = match[1];
-        console.log(result);
-        return result;
-    });
+            const videoDetails = await page.evaluate(() => {
+                const jsonString = document.querySelector("#scriptTag").innerText;
+                const jsonObj = JSON.parse(jsonString);
+                return jsonObj;
+            });
+            const channel = await page.evaluate(() => {
+                const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
+                const match = channelURL.match(/@(.*)/);
+                const result = match[1];
+                console.log(result);
+                return result;
+            });
         }
 
         console.log('temp2')
