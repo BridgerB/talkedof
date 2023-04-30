@@ -31,7 +31,7 @@ async function connectToDatabase() {
 async function getVideos(db) {
     try {
         const videosToTranscribe = await db.query(
-            'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 10'
+            'SELECT * FROM videos WHERE transcribed = false AND skipped = false limit 50'
         );
         return videosToTranscribe;
     } catch (error) {
@@ -46,33 +46,38 @@ async function getVideos(db) {
  * @param {Surreal} db - Connected Surreal instance.
  */
 async function processVideos(videosToTranscribe, db) {
-    const transcriptPromises = [];
-
-    for (const video of videosToTranscribe) {
-        for (const subVideo of video.result) {
-            console.log(
-                'Start: ************************************************************************************'
-            );
-            transcriptPromises.push(getTranscript(subVideo, db));
+    const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+    try {
+        for (const video of videosToTranscribe) {
+            for (const subVideo of video.result) {
+                console.log(
+                    'Start: ************************************************************************************'
+                );
+                await getTranscript(subVideo, db, browser);
+            }
+        }
+    } finally {
+        if (browser) {
+            await browser.close();
+            console.log('Browser closed');
         }
     }
-
-    await Promise.all(transcriptPromises);
 }
 
 // Get the transcript for a video
-async function getTranscript(video, db) {
+async function getTranscript(video, db, browser) {
     return new Promise(async (resolve, reject) => {
         try {
-            const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
             await processPage(video, db, browser, resolve);
         } catch (e) {
             console.error('ERROR', e);
             console.log('No transcript found...');
             reject(e);
         }
-    })
+    });
 };
+
+
 
 
 // Process a single video page
@@ -93,13 +98,18 @@ async function processPage(video, db, browser, resolve) {
         await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
         await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
         await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
+        console.log('temp1')
+        await page.close()
     } catch (e) {
         console.error(`Error: can't find transcript... ${e.message}`);
         await updateVideoStatus(video, db, { skipped: true });
-        await browser.close();
         return;
+    } finally {
     }
-    const videoDetails = await page.evaluate(() => {
+
+    await page.on('response', async (response) => {
+        try {
+                const videoDetails = await page.evaluate(() => {
         const jsonString = document.querySelector("#scriptTag").innerText;
         const jsonObj = JSON.parse(jsonString);
         return jsonObj;
@@ -111,7 +121,9 @@ async function processPage(video, db, browser, resolve) {
         console.log(result);
         return result;
     });
-    await page.on('response', async (response) => {
+        }
+
+        console.log('temp2')
         const request = response.request();
         if (request.url().includes('transcript')) {
             console.log(`Transcript found...`);
@@ -120,7 +132,6 @@ async function processPage(video, db, browser, resolve) {
             let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
             // console.log(`a: `+JSON.stringify(transcripts[0]))
             if (typeof transcripts === 'object') {
-                browser.close();
                 await processTranscripts(transcripts, url, db, video);
                 count = transcripts.length;
                 await updateVideoStatus(video, db, {
@@ -145,7 +156,7 @@ async function processPage(video, db, browser, resolve) {
 async function processTranscripts(transcripts, url, db, video) {
     const filteredTranscripts = transcripts.filter(item => !item.hasOwnProperty('transcriptSectionHeaderRenderer'));
 
-    const cleanedTranscripts = filteredTranscripts.map(item => {
+    const cleanedTranscripts = filteredTranscripts.map((item, index) => {
         const segment = item.transcriptSegmentRenderer;
         let start = parseInt(segment.startMs);
         let end = parseInt(segment.endMs);
@@ -161,7 +172,8 @@ async function processTranscripts(transcripts, url, db, video) {
         return {
             startMs: start,
             endMs: end,
-            transcript: transcript
+            transcript: transcript,
+            transcriptIndex: index
         };
     });
 

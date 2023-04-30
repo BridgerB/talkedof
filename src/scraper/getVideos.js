@@ -33,7 +33,7 @@ async function setupBrowser() {
 }
 
 async function scrollToBottom(page) {
-  const endTime = Date.now() + 30000;
+  const endTime = Date.now() + 5000;
 
   while (Date.now() < endTime) {
     await page.evaluate(() => {
