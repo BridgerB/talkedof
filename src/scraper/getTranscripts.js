@@ -102,6 +102,7 @@ async function processPage(video, db, browser, resolve) {
     } catch (e) {
         console.error(`Error: can't find transcript... ${e.message}`);
         await updateVideoStatus(video, db, { skipped: true });
+        console.log('Video skipped and updated.')
         await page.close();
         resolve();
     }
@@ -140,8 +141,8 @@ async function processPage(video, db, browser, resolve) {
                 resolve();
             } else {
                 console.log(`ERROR: typeof transcript is not object`);
-                console.log(transcripts)
                 await updateVideoStatus(video, db, { skipped: true });
+                console.log('Video skipped and updated.')
                 await page.close();
                 resolve();
             }
