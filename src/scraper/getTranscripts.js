@@ -143,8 +143,6 @@ async function processPage(video, db, browser, resolve) {
                 console.log(transcripts)
                 await updateVideoStatus(video, db, { skipped: true });
             }
-            resolve();
-            await page.close();
         }
     });
 }
