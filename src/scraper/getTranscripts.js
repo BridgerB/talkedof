@@ -142,6 +142,8 @@ async function processPage(video, db, browser, resolve) {
                 console.log(`ERROR: typeof transcript is not object`);
                 console.log(transcripts)
                 await updateVideoStatus(video, db, { skipped: true });
+                await page.close();
+                resolve();
             }
         }
     });
