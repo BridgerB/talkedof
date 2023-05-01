@@ -102,10 +102,10 @@ async function processPage(video, db, browser, resolve) {
     } catch (e) {
         console.error(`Error: can't find transcript... ${e.message}`);
         await updateVideoStatus(video, db, { skipped: true });
-    } finally {
         await page.close();
         resolve();
     }
+
     const videoDetails = await page.evaluate(() => {
                 const jsonString = document.querySelector("#scriptTag").innerText;
                 const jsonObj = JSON.parse(jsonString);
@@ -136,6 +136,8 @@ async function processPage(video, db, browser, resolve) {
                     thumbnailUrl: videoDetails.thumbnailUrl[0],
                     channel: channel,
                 });
+                await page.close();
+                resolve();
             } else {
                 console.log(`ERROR: typeof transcript is not object`);
                 console.log(transcripts)
