@@ -5,8 +5,7 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'lexfridman';
-const ns = 'lexfridman'
+const ns = 'ramdass'
 //********************************************************************
 /**
  * Connect to the database.
@@ -83,7 +82,7 @@ async function getTranscript(video, db, browser) {
             const timeout = setTimeout(() => {
                 console.log('No transcript found within the time limit...');
                 resolve();
-            }, 10000); // 10 seconds timeout
+            }, 30000); // 30 seconds timeout
 
             await processPage(video, db, browser, () => {
                 clearTimeout(timeout); // Clear the timeout when a transcript is found
