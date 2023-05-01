@@ -126,46 +126,46 @@ async function processPage(video, db, browser, resolve) {
     }
 
     const videoDetails = await page.evaluate(() => {
-                const jsonString = document.querySelector("#scriptTag").innerText;
-                const jsonObj = JSON.parse(jsonString);
-                return jsonObj;
-            });
-            const channel = await page.evaluate(() => {
-                const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
-                const match = channelURL.match(/@(.*)/);
-                const result = match[1];
-                console.log(result);
-                return result;
-            });
-    await page.on('response', async (response) => {
-        const request = response.request();
-        if (request.url().includes('transcript')) {
-            console.log(`Transcript found...`);
-            let text = JSON.parse(`${await response.text()}`);
-            //TODO 2023-04-28 12:30:10 AM check here tomorrow..
-            let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
-            // console.log(`a: `+JSON.stringify(transcripts[0]))
-            if (typeof transcripts === 'object') {
-                await processTranscripts(transcripts, url, db, video);
-                count = transcripts.length;
-                await updateVideoStatus(video, db, {
-                    transcribed: true,
-                    lines: count,
-                    uploadDate: new Date(videoDetails.uploadDate),
-                    thumbnailUrl: videoDetails.thumbnailUrl[0],
-                    channel: channel,
-                });
-                await page.close();
-                resolve();
-            } else {
-                console.log(`ERROR: typeof transcript is not object`);
-                await updateVideoStatus(video, db, { skipped: true });
-                console.log('Video skipped and updated.')
-                await page.close();
-                resolve();
-            }
-        }
+        const jsonString = document.querySelector("#scriptTag").innerText;
+        const jsonObj = JSON.parse(jsonString);
+        return jsonObj;
     });
+    const channel = await page.evaluate(() => {
+        const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
+        const match = channelURL.match(/@(.*)/);
+        const result = match[1];
+        console.log(result);
+        return result;
+    });
+    const responsePromise = new Promise(async (resolveResponse) => {
+        page.on('response', async (response) => {
+            const request = response.request();
+            if (request.url().includes('transcript')) {
+                console.log(`Transcript found...`);
+                let text = JSON.parse(`${await response.text()}`);
+                let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
+
+                if (typeof transcripts === 'object') {
+                    await processTranscripts(transcripts, url, db, video);
+                    count = transcripts.length;
+                    await updateVideoStatus(video, db, {
+                        transcribed: true,
+                        lines: count,
+                        uploadDate: new Date(videoDetails.uploadDate),
+                        thumbnailUrl: videoDetails.thumbnailUrl[0],
+                        channel: channel,
+                    });
+                    resolveResponse(); // Resolve the response promise
+                } else {
+                    console.log(`ERROR: typeof transcript is not object`);
+                    await updateVideoStatus(video, db, { skipped: true });
+                    console.log('Video skipped and updated.')
+                    resolveResponse(); // Resolve the response promise
+                }
+            }
+        });
+    });
+
 }
 
 // Process the retrieved transcripts and save them to the database
