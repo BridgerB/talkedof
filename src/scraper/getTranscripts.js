@@ -64,19 +64,38 @@ async function processVideos(videosToTranscribe, db) {
     }
 }
 
+/**
+ * @typedef {Object} ResolveFunction
+ * @property {function():void} resolve
+ */
+
+/**
+ * Get the transcript for a video
+ * @param {Object} video
+ * @param {Surreal} db
+ * @param {puppeteer.Browser} browser
+ * @returns {Promise<void>}
+ */
 // Get the transcript for a video
 async function getTranscript(video, db, browser) {
     return new Promise(async (resolve, reject) => {
         try {
-            await processPage(video, db, browser, resolve);
+            const timeout = setTimeout(() => {
+                console.log('No transcript found within the time limit...');
+                resolve();
+            }, 10000); // 10 seconds timeout
+
+            await processPage(video, db, browser, () => {
+                clearTimeout(timeout); // Clear the timeout when a transcript is found
+                resolve();
+            });
         } catch (e) {
             console.error('ERROR', e);
             console.log('No transcript found...');
-            resolve();//prob not doing this right
+            resolve();
         }
     });
-};
-
+}
 
 
 
