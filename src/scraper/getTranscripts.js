@@ -99,11 +99,12 @@ async function processPage(video, db, browser, resolve) {
         await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
         await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
         await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
-        console.log('clicks done')
     } catch (e) {
         console.error(`Error: can't find transcript... ${e.message}`);
         await updateVideoStatus(video, db, { skipped: true });
-        return;
+    } finally {
+        await page.close();
+        resolve();
     }
     const videoDetails = await page.evaluate(() => {
                 const jsonString = document.querySelector("#scriptTag").innerText;
