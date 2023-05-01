@@ -37,8 +37,7 @@ export async function load({ params, url }) {
             });
             // Select a specific namespace / database
             await db.use(subdomain, "talkedof");
-            // answer = await db.query(`select * from (select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcripts is not NONE order by uploadDate DESC) limit 10 `
-            answer = await db.query(`select * from (select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcripts is not NONE order by uploadDate DESC)`
+            answer = await db.query(`select * from (select *, transcripts[where transcript contains '${searchTerm.toLowerCase()}'] from videos where transcripts is not NONE order by uploadDate DESC) limit 10`
             );
             answerCount = await db.query(
                 `select uploadDate, count(transcripts[where transcript contains '${searchTerm.toLowerCase()}']) from videos where uploadDate is not None order by uploadDate`

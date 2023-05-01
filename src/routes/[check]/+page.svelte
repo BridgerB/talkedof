@@ -60,11 +60,16 @@
     {#if video.transcripts.length > 0}
         <br />
         <div style="text-align:center;">
-            <h2>{video.title}</h2>
+            <a href={`https://www.youtube.com/watch?v=${video.videoId}&start=${Math.floor(
+                video.transcripts[0].startMs / 1000
+            )}`}>
+                <h2>{video.title}</h2>
+              </a>
             <p>{new Date(video.uploadDate).toDateString()}</p>
+
             <!-- <img src={video.thumbnailUrl} alt="thumnail" width="500" height="300"> -->
             <!-- <p>{JSON.stringify(video.videoId)}</p> -->
-            <iframe
+            <!-- <iframe
                 width="560"
                 height="315"
                 src="https://www.youtube.com/embed/{video.videoId}?start={Math.floor(
@@ -74,7 +79,7 @@
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowfullscreen
-            />
+            /> -->
         </div>
 
         <br />
