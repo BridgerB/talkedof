@@ -96,12 +96,11 @@ async function getTranscript(video, db, browser) {
     });
 }
 
-
-
 // Process a single video page
 async function processPage(video, db, browser, resolve) {
     const url = video.url;
     let count = 0;
+    let transcriptFound = false;
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
@@ -137,36 +136,38 @@ async function processPage(video, db, browser, resolve) {
         console.log(result);
         return result;
     });
-    const responsePromise = new Promise(async (resolveResponse) => {
-        page.on('response', async (response) => {
-            const request = response.request();
-            if (request.url().includes('transcript')) {
-                console.log(`Transcript found...`);
-                let text = JSON.parse(`${await response.text()}`);
-                let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
 
-                if (typeof transcripts === 'object') {
-                    await processTranscripts(transcripts, url, db, video);
-                    count = transcripts.length;
-                    await updateVideoStatus(video, db, {
-                        transcribed: true,
-                        lines: count,
-                        uploadDate: new Date(videoDetails.uploadDate),
-                        thumbnailUrl: videoDetails.thumbnailUrl[0],
-                        channel: channel,
-                    });
-                    resolveResponse(); // Resolve the response promise
-                } else {
-                    console.log(`ERROR: typeof transcript is not object`);
-                    await updateVideoStatus(video, db, { skipped: true });
-                    console.log('Video skipped and updated.')
-                    resolveResponse(); // Resolve the response promise
-                }
-            }
+    const response = await page.waitForResponse(
+        (response) => response.request().url().includes('transcript'),
+        { timeout: 10000 }
+    );
+
+    console.log(`Transcript found...`);
+    let text = JSON.parse(`${await response.text()}`);
+    let transcripts = text.actions[0].updateEngagementPanelAction.content.transcriptRenderer.content.transcriptSearchPanelRenderer.body.transcriptSegmentListRenderer.initialSegments;
+
+    if (typeof transcripts === 'object') {
+        await processTranscripts(transcripts, url, db, video);
+        count = transcripts.length;
+        await updateVideoStatus(video, db, {
+            transcribed: true,
+            lines: count,
+            uploadDate: new Date(videoDetails.uploadDate),
+            thumbnailUrl: videoDetails.thumbnailUrl[0],
+            channel: channel,
         });
-    });
-
+        await page.close();
+        resolve();
+    } else {
+        console.log(`ERROR: typeof transcript is not object`);
+        await updateVideoStatus(video, db, { skipped: true });
+        console.log('Video skipped and updated.')
+        await page.close();
+        resolve();
+    }
 }
+
+
 
 // Process the retrieved transcripts and save them to the database
 async function processTranscripts(transcripts, url, db, video) {
