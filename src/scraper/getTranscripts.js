@@ -100,7 +100,6 @@ async function getTranscript(video, db, browser) {
 async function processPage(video, db, browser, resolve) {
     const url = video.url;
     let count = 0;
-    let transcriptFound = false;
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
@@ -122,6 +121,7 @@ async function processPage(video, db, browser, resolve) {
         console.log('Video skipped and updated.')
         await page.close();
         resolve();
+        return;
     }
 
     const videoDetails = await page.evaluate(() => {
@@ -156,15 +156,14 @@ async function processPage(video, db, browser, resolve) {
             thumbnailUrl: videoDetails.thumbnailUrl[0],
             channel: channel,
         });
-        await page.close();
-        resolve();
+        console.log('Video transcribed and updated.');
     } else {
         console.log(`ERROR: typeof transcript is not object`);
         await updateVideoStatus(video, db, { skipped: true });
         console.log('Video skipped and updated.')
-        await page.close();
-        resolve();
     }
+    await page.close();
+    resolve();
 }
 
 
