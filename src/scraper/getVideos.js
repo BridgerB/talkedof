@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'allin';
-const ns = 'allin'
+const channel_name = 'lexfridman';
+const ns = 'lexfridman'
 //********************************************************************
 const url = `https://www.youtube.com/@${channel_name}/videos`;
 
@@ -33,7 +33,7 @@ async function setupBrowser() {
 }
 
 async function scrollToBottom(page) {
-  const endTime = Date.now() + 5000;
+  const endTime = Date.now() + 120000;
 
   while (Date.now() < endTime) {
     await page.evaluate(() => {

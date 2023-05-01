@@ -5,8 +5,8 @@ import Surreal from 'surrealdb.js'; //node
 import dotenv from 'dotenv';
 dotenv.config();
 //********************************************************************
-const channel_name = 'allin';
-const ns = 'allin'
+const channel_name = 'lexfridman';
+const ns = 'lexfridman'
 //********************************************************************
 /**
  * Connect to the database.
@@ -72,7 +72,7 @@ async function getTranscript(video, db, browser) {
         } catch (e) {
             console.error('ERROR', e);
             console.log('No transcript found...');
-            reject(e);
+            resolve();//prob not doing this right
         }
     });
 };
@@ -90,6 +90,7 @@ async function processPage(video, db, browser, resolve) {
     console.log(`Getting transcription for: ${video.videoId}`);
     await page.goto(`https://www.youtube.com/watch?v=${video.videoId}`);
     try {
+        console.log('starting page clicks')
         await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
         await page.click('#info > span:nth-child(3)');
         await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
@@ -98,18 +99,13 @@ async function processPage(video, db, browser, resolve) {
         await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
         await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
         await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
-        console.log('temp1')
-        await page.close()
+        console.log('clicks done')
     } catch (e) {
         console.error(`Error: can't find transcript... ${e.message}`);
         await updateVideoStatus(video, db, { skipped: true });
         return;
-    } finally {
     }
-
-    await page.on('response', async (response) => {
-        try {
-            const videoDetails = await page.evaluate(() => {
+    const videoDetails = await page.evaluate(() => {
                 const jsonString = document.querySelector("#scriptTag").innerText;
                 const jsonObj = JSON.parse(jsonString);
                 return jsonObj;
@@ -121,9 +117,7 @@ async function processPage(video, db, browser, resolve) {
                 console.log(result);
                 return result;
             });
-        }
-
-        console.log('temp2')
+    await page.on('response', async (response) => {
         const request = response.request();
         if (request.url().includes('transcript')) {
             console.log(`Transcript found...`);
@@ -146,8 +140,8 @@ async function processPage(video, db, browser, resolve) {
                 console.log(transcripts)
                 await updateVideoStatus(video, db, { skipped: true });
             }
-            await browser.close();
             resolve();
+            await page.close();
         }
     });
 }
@@ -183,6 +177,8 @@ async function processTranscripts(transcripts, url, db, video) {
         await db.change(video.id, {
             transcripts: cleanedTranscripts
         });
+
+        console.log(`Transcription added`);
     } catch (e) {
         console.error('THIS ERROR IS FROM A BUG IN SURREALDB)');
     }
