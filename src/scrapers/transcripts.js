@@ -45,7 +45,7 @@ async function getVideos(db) {
  * @param {Surreal} db - Connected Surreal instance.
  */
 async function processVideos(videosToTranscribe, db) {
-    const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+    const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
     try {
         for (const video of videosToTranscribe) {
             for (const subVideo of video.result) {
