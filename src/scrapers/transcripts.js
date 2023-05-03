@@ -45,7 +45,7 @@ async function getVideos(db) {
  * @param {Surreal} db - Connected Surreal instance.
  */
 async function processVideos(videosToTranscribe, db) {
-    const browser = await puppeteer.launch({ headless: true, defaultViewport: null });
+    const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
     try {
         for (const video of videosToTranscribe) {
             for (const subVideo of video.result) {
@@ -84,10 +84,9 @@ async function getTranscript(video, db, browser) {
                 resolve();
             }, 30000); // 30 seconds timeout
 
-            await processPage(video, db, browser, () => {
-                clearTimeout(timeout); // Clear the timeout when a transcript is found
-                resolve();
-            });
+            await processVideoPage(video, db, browser);
+            clearTimeout(timeout); // Clear the timeout when a transcript is found
+            resolve();
         } catch (e) {
             console.error('ERROR', e);
             console.log('No transcript found...');
@@ -96,39 +95,42 @@ async function getTranscript(video, db, browser) {
     });
 }
 
-// Process a single video page
-async function processPage(video, db, browser, resolve) {
-    const url = video.url;
-    let count = 0;
+
+
+// Opens a new browser page and configures it
+async function openConfiguredPage(browser) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36");
-    console.log(`Getting transcription for: ${video.videoId}`);
-    await page.goto(`https://www.youtube.com/watch?v=${video.videoId}`);
+    return page;
+}
+
+// Navigates to the video URL and handles interactions
+const DEFAULT_TIMEOUT = 5000;
+async function navigateToVideoAndHandleInteractions(page, videoId) {
+    await page.goto(`https://www.youtube.com/watch?v=${videoId}`);
     try {
-        console.log('starting page clicks')
-        await page.waitForSelector('#info > span:nth-child(3)', { timeout: 5000 });
+        await page.waitForSelector('#info > span:nth-child(3)', { timeout: DEFAULT_TIMEOUT });
         await page.click('#info > span:nth-child(3)');
-        await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: 5000 });
+        await page.waitForSelector('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button', { timeout: DEFAULT_TIMEOUT });
         await page.click('#movie_player > .ytp-chrome-bottom > .ytp-chrome-controls > .ytp-left-controls > .ytp-play-button');
-        await page.waitForSelector('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill', { timeout: 5000 });
+        await page.waitForSelector('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill', { timeout: DEFAULT_TIMEOUT });
         await page.click('.ytd-watch-metadata > #button-shape > .yt-spec-button-shape-next > yt-touch-feedback-shape > .yt-spec-touch-feedback-shape > .yt-spec-touch-feedback-shape__fill');
-        await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: 5000 });
+        await page.waitForSelector('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)', { timeout: DEFAULT_TIMEOUT });
         await page.click('.ytd-popup-container > #items > .style-scope > .style-scope > .style-scope:nth-child(2)');
     } catch (e) {
-        console.error(`Error: can't find transcript... ${e.message}`);
-        await updateVideoStatus(video, db, { skipped: true });
-        console.log('Video skipped and updated.')
-        await page.close();
-        resolve();
-        return;
+        throw new Error(`Error: can't find transcript... ${e.message}`);
     }
+}
 
+// Extracts and processes the transcript data
+async function extractAndProcessTranscriptData(page, video, url, db) {
     const videoDetails = await page.evaluate(() => {
         const jsonString = document.querySelector("#scriptTag").innerText;
         const jsonObj = JSON.parse(jsonString);
         return jsonObj;
     });
+
     const channel = await page.evaluate(() => {
         const channelURL = document.querySelector("#text-container.ytd-channel-name a.yt-simple-endpoint").href;
         const match = channelURL.match(/@(.*)/);
@@ -148,23 +150,48 @@ async function processPage(video, db, browser, resolve) {
 
     if (typeof transcripts === 'object') {
         await processTranscripts(transcripts, url, db, video);
-        count = transcripts.length;
-        await updateVideoStatus(video, db, {
-            transcribed: true,
-            lines: count,
+        const count = transcripts.length;
+        return {
+            count: count,
             uploadDate: new Date(videoDetails.uploadDate),
             thumbnailUrl: videoDetails.thumbnailUrl[0],
             channel: channel,
-        });
-        console.log('Video transcribed and updated.');
+        };
     } else {
-        console.log(`ERROR: typeof transcript is not object`);
-        await updateVideoStatus(video, db, { skipped: true });
-        console.log('Video skipped and updated.')
+        throw new Error("ERROR: typeof transcript is not object");
     }
-    await page.close();
-    resolve();
 }
+
+// Processes a single video page
+async function processVideoPage(video, db, browser) {
+    return new Promise(async (resolve, reject) => {
+        const url = video.url;
+        const page = await openConfiguredPage(browser);
+        console.log(`Getting transcription for: ${video.videoId}`);
+
+        try {
+            await navigateToVideoAndHandleInteractions(page, video.videoId);
+            const result = await extractAndProcessTranscriptData(page, video, url, db);
+            await updateVideoStatus(video, db, {
+                transcribed: true,
+                lines: result.count,
+                uploadDate: result.uploadDate,
+                thumbnailUrl: result.thumbnailUrl,
+                channel: result.channel,
+            });
+            console.log('Video transcribed and updated.');
+        } catch (e) {
+            console.error(e.message);
+            await updateVideoStatus(video, db, { skipped: true });
+            console.log('Video skipped and updated.');
+        }
+
+        await page.close();
+        resolve();
+    });
+}
+
+
 
 
 
