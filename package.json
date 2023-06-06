@@ -22,7 +22,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"chart.js": "^4.2.1",
+		"chart.js": "^4.3.0",
 		"dotenv": "^16.0.3",
 		"puppeteer": "^18.2.1",
 		"surrealdb.js": "^0.6.0"
